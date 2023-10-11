@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  loader:
+    build: ./etl/
+    depends_on:
+      - db
+      - redis
+      - elastic
+    env_file:
+      - ./.env
+
+  db:
+    image: postgres:14.9-alpine3.18
+    volumes:
+      - db_data:/var/lib/postgresql/data:rw
+    ports:
+      - "127.0.0.1:5432:5432"
+    env_file:
+      - ./.env
+  elastic:
+    image: elasticsearch:8.6.2
+    ports:
+      - "127.0.0.1:9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data:rw
+  redis:
+    image: redis:7.2.1-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data:rw
+
+volumes:
+  db_data:
+  redis_data:
+  elastic_data:
