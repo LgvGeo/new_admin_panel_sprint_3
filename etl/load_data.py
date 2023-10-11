@@ -1,4 +1,3 @@
-import os
 import time
 from contextlib import contextmanager
 
@@ -8,20 +7,20 @@ import psycopg2
 import psycopg2.errors
 import redis
 import redis.exceptions
-from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
 from psycopg2.extras import DictCursor
 
 from common import SLEEPING_TIME
 from controllers import ElasticsearchController, PGController, RedisController
 from logger import configure_logger
+from models import ElasticsearchSettings, PGSettings, RedisSettings
 
-load_dotenv()
 psycopg2.extras.register_uuid()
 log = configure_logger()
 
 
 @contextmanager
-def postgres_conntection(**kwargs):
+def postgres_connection(**kwargs):
     conn = psycopg2.connect(**kwargs, cursor_factory=DictCursor)
     try:
         yield conn
@@ -31,12 +30,21 @@ def postgres_conntection(**kwargs):
 
 
 @contextmanager
-def redis_conntection(**kwargs):
-    r = redis.Redis(**kwargs, decode_responses=True)
+def redis_connection(**kwargs):
+    conn = redis.Redis(**kwargs, decode_responses=True)
     try:
-        yield r
+        yield conn
     finally:
-        r.close()
+        conn.close()
+
+
+@contextmanager
+def elastic_connection(**kwargs):
+    conn = Elasticsearch(**kwargs)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 @backoff.on_exception(
@@ -48,16 +56,17 @@ def redis_conntection(**kwargs):
             psycopg2.errors.OperationalError),
         max_tries=8,
         on_backoff=log.error)
-def process_movies(pg_conf, redis_conf, elasticsearch_conn_uri):
+def process_movies(pg_conf, redis_conf, elasticsearch_conf):
     while True:
         with (
-            redis_conntection(**redis_conf) as redis_conn,
-            postgres_conntection(**pg_conf) as pg_conn
+            redis_connection(**redis_conf) as redis_conn,
+            postgres_connection(**pg_conf) as pg_conn,
+            elastic_connection(**elasticsearch_conf) as elastic_conn
         ):
             pg_controller = PGController(pg_conn)
             redis_controller = RedisController(redis_conn)
             elasticsearch_controller = ElasticsearchController(
-                elasticsearch_conn_uri)
+                elastic_conn)
 
             timestamp = (
                 redis_controller.retrieve_state('timestamp')
@@ -74,16 +83,7 @@ def process_movies(pg_conf, redis_conf, elasticsearch_conn_uri):
 
 
 if __name__ == '__main__':
-    pg_conf = {
-        'dbname': os.environ.get('DB_NAME'),
-        'user': os.environ.get('DB_USER'),
-        'password': os.environ.get('DB_PASSWORD'),
-        'host': os.environ.get('DB_HOST'),
-        'port': os.environ.get('DB_PORT')
-    }
-    redis_conf = {
-        'host': os.environ.get('REDIS_HOST', '127.0.0.1'),
-        'port': os.environ.get('REDIS_PORT', '6379'),
-    }
-    elasticsearch_conn_uri = os.environ.get('ELASTICSEARCH_CONN_URI')
-    process_movies(pg_conf, redis_conf, elasticsearch_conn_uri)
+    pg_conf = PGSettings().model_dump()
+    redis_conf = RedisSettings().model_dump()
+    elasticsearch_conf = ElasticsearchSettings().model_dump()
+    process_movies(pg_conf, redis_conf, elasticsearch_conf)

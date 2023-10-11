@@ -1,7 +1,6 @@
 
 import redis
 import redis.exceptions
-from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
 from common import LOADING_SIZE, SELECT_MOVIES_SQL_PATTERN
@@ -9,8 +8,8 @@ from models import Movie
 
 
 class ElasticsearchController:
-    def __init__(self, elasticsearch_conn_uri):
-        self.client = Elasticsearch(elasticsearch_conn_uri)
+    def __init__(self, connection):
+        self.connection = connection
 
     def load_movies(self, documents: list[Movie]):
         index = 'movies'
@@ -23,7 +22,10 @@ class ElasticsearchController:
                 "_source": dict_format
             }
             actions.append(obj)
-        bulk(self.client, actions)
+        bulk(self.connection, actions)
+
+    def close(self):
+        self.connection.close()
 
 
 class PGController:
@@ -31,17 +33,15 @@ class PGController:
         self.connection = connection
 
     def extract_data(self, timestamp: str):
-        cursor = self.connection.cursor()
-        select_movies_sql_stmt = SELECT_MOVIES_SQL_PATTERN.format(
-            timestamp=timestamp)
-        cursor.execute(select_movies_sql_stmt)
-        while True:
-            data = [
-                Movie(**x) for x in cursor.fetchmany(LOADING_SIZE)
-            ]
-            if not data:
-                break
-            yield data
+        with self.connection.cursor() as cursor:
+            select_movies_sql_stmt = SELECT_MOVIES_SQL_PATTERN.format(
+                timestamp=timestamp)
+            cursor.execute(select_movies_sql_stmt)
+            while rows := cursor.fetchmany(LOADING_SIZE):
+                data = [
+                    Movie(**x) for x in rows
+                ]
+                yield data
 
 
 class RedisController:
