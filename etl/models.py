@@ -26,7 +26,7 @@ class ElasticsearchSettings(BaseSettings):
         validation_alias='ELASTICSEARCH_CONN_URI')
 
 
-class Person(BaseModel):
+class PersonForMovie(BaseModel):
     id: uuid.UUID
     name: str
 
@@ -39,14 +39,14 @@ class GenreForMovie(BaseModel):
 class Movie(BaseModel):
     id: uuid.UUID
     modified: Optional[datetime]
-    actors: list[Person]
+    actors: list[PersonForMovie]
     actors_names: list[str]
     description: Optional[str]
     director: list[str]
     genre: list[GenreForMovie]
     imdb_rating: Optional[float]
     title: str
-    writers: list[Person]
+    writers: list[PersonForMovie]
     writers_names: list[str]
 
     @field_validator(
