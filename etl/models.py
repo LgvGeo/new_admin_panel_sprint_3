@@ -31,7 +31,7 @@ class Person(BaseModel):
     name: str
 
 
-class Genre(BaseModel):
+class GenreForMovie(BaseModel):
     id: uuid.UUID
     name: str
 
@@ -43,7 +43,7 @@ class Movie(BaseModel):
     actors_names: list[str]
     description: Optional[str]
     director: list[str]
-    genre: list[Genre]
+    genre: list[GenreForMovie]
     imdb_rating: Optional[float]
     title: str
     writers: list[Person]
