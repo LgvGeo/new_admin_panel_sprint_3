@@ -52,10 +52,17 @@ class Genre(BaseModel):
         return dateutil.parser.isoparse(str(date))
 
 
+class MovieForPerson(BaseModel):
+    id: uuid.UUID
+    title: str
+    roles: list[str]
+
+
 class Person(BaseModel):
     id: uuid.UUID
     name: str
     modified: Optional[datetime]
+    films: list[MovieForPerson]
 
     @field_validator(
             'modified',
