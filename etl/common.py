@@ -92,13 +92,38 @@ order by modified
 """
 
 SELECT_PERSONS_SQL_PATTERN = """
-SELECT DISTINCT
-    p.id,
+with pf as (SELECT DISTINCT
+    p.id as id,
     p.full_name as name,
-    p.modified
+    fw.id as film_id,
+    fw.title as title,
+    array_agg(pfw.role) as roles,
+
+    case
+        when
+            fw.modified >= p.modified
+        then fw.modified
+        else p.modified
+    end as modified
+
 FROM content.person p
 JOIN content.person_film_work pfw ON pfw.person_id = p.id
 JOIN content.film_work fw ON pfw.film_work_id = fw.id
 WHERE p.modified > '{timestamp}'::timestamp
-order by modified
+    or fw.modified > '{timestamp}'::timestamp
+group by p.id, p.full_name, fw.id, fw.title)
+SELECT
+    id,
+    name,
+    max(modified) as modified,
+    json_agg(
+        DISTINCT jsonb_build_object(
+            'id', film_id,
+            'title', title,
+            'roles', roles
+        )
+    ) as films
+    from pf
+    GROUP BY id, name
+    ORDER BY modified
 """
