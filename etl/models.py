@@ -52,6 +52,21 @@ class Genre(BaseModel):
         return dateutil.parser.isoparse(str(date))
 
 
+class Person(BaseModel):
+    id: uuid.UUID
+    name: str
+    modified: Optional[datetime]
+
+    @field_validator(
+            'modified',
+            mode='before', check_fields=False)
+    @classmethod
+    def str2datetime(cls, date) -> datetime:
+        if date is None:
+            return date
+        return dateutil.parser.isoparse(str(date))
+
+
 class Movie(BaseModel):
     id: uuid.UUID
     modified: Optional[datetime]

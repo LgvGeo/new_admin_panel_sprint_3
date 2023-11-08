@@ -90,3 +90,15 @@ JOIN content.film_work fw ON gfw.film_work_id = fw.id
 WHERE g.modified > '{timestamp}'::timestamp
 order by modified
 """
+
+SELECT_PERSONS_SQL_PATTERN = """
+SELECT DISTINCT
+    p.id,
+    p.full_name as name,
+    p.modified
+FROM content.person p
+JOIN content.person_film_work pfw ON pfw.person_id = p.id
+JOIN content.film_work fw ON pfw.film_work_id = fw.id
+WHERE p.modified > '{timestamp}'::timestamp
+order by modified
+"""
