@@ -74,7 +74,7 @@ def process_movies(pg_conf, redis_conf, elasticsearch_conf):
                 or '-infinity'
             )
             log.info(f'last processed timestamp: {timestamp}')
-            for data in pg_controller.extract_data(timestamp):
+            for data in pg_controller.extract_movies(timestamp):
                 log.info(f'num of processed records: {len(data)}')
                 elasticsearch_controller.load_movies(data)
                 max_timestamp_in_data = data[-1].modified.isoformat()

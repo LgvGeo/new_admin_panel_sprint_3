@@ -32,7 +32,7 @@ class PGController:
     def __init__(self, connection):
         self.connection = connection
 
-    def extract_data(self, timestamp: str):
+    def extract_movies(self, timestamp: str):
         with self.connection.cursor() as cursor:
             select_movies_sql_stmt = SELECT_MOVIES_SQL_PATTERN.format(
                 timestamp=timestamp)
