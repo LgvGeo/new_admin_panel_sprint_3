@@ -3,8 +3,9 @@ import redis
 import redis.exceptions
 from elasticsearch.helpers import bulk
 
-from common import LOADING_SIZE, SELECT_MOVIES_SQL_PATTERN
-from models import Movie
+from common import (LOADING_SIZE, SELECT_GENRES_SQL_PATTERN,
+                    SELECT_MOVIES_SQL_PATTERN)
+from models import Genre, Movie
 
 
 class ElasticsearchController:
@@ -13,6 +14,19 @@ class ElasticsearchController:
 
     def load_movies(self, documents: list[Movie]):
         index = 'movies'
+        actions = []
+        for document in documents:
+            dict_format = document.model_dump(exclude=['modified'])
+            obj = {
+                "_index": index,
+                "_id": dict_format['id'],
+                "_source": dict_format
+            }
+            actions.append(obj)
+        bulk(self.connection, actions)
+
+    def load_genres(self, documents: list[Genre]):
+        index = 'genres'
         actions = []
         for document in documents:
             dict_format = document.model_dump(exclude=['modified'])
@@ -40,6 +54,17 @@ class PGController:
             while rows := cursor.fetchmany(LOADING_SIZE):
                 data = [
                     Movie(**x) for x in rows
+                ]
+                yield data
+
+    def extract_genres(self, timestamp: str):
+        with self.connection.cursor() as cursor:
+            select_genres_sql_stmt = SELECT_GENRES_SQL_PATTERN.format(
+                timestamp=timestamp)
+            cursor.execute(select_genres_sql_stmt)
+            while rows := cursor.fetchmany(LOADING_SIZE):
+                data = [
+                    Genre(**x) for x in rows
                 ]
                 yield data
 
