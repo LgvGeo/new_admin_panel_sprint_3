@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import contextmanager
 
 import backoff
@@ -69,7 +70,7 @@ def process_movies(pg_conf, redis_conf, elasticsearch_conf):
                 elastic_conn)
 
             timestamp = (
-                redis_controller.retrieve_state('timestamp')
+                redis_controller.retrieve_state('movies_timestamp')
                 or '-infinity'
             )
             log.info(f'last processed timestamp: {timestamp}')
@@ -77,7 +78,8 @@ def process_movies(pg_conf, redis_conf, elasticsearch_conf):
                 log.info(f'num of processed records: {len(data)}')
                 elasticsearch_controller.load_movies(data)
                 max_timestamp_in_data = data[-1].modified.isoformat()
-                redis_controller.save_state('timestamp', max_timestamp_in_data)
+                redis_controller.save_state(
+                    'movies_timestamp', max_timestamp_in_data)
         log.info('no data to process, sleep')
         time.sleep(SLEEPING_TIME)
 
@@ -86,4 +88,9 @@ if __name__ == '__main__':
     pg_conf = PGSettings().model_dump()
     redis_conf = RedisSettings().model_dump()
     elasticsearch_conf = ElasticsearchSettings().model_dump()
-    process_movies(pg_conf, redis_conf, elasticsearch_conf)
+    tasks_list = []
+    with ThreadPoolExecutor() as pool:
+        task = pool.submit(
+            process_movies, pg_conf, redis_conf, elasticsearch_conf)
+        tasks_list.append(task)
+        wait(tasks_list)

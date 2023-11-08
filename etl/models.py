@@ -31,6 +31,11 @@ class Person(BaseModel):
     name: str
 
 
+class Genre(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
 class Movie(BaseModel):
     id: uuid.UUID
     modified: Optional[datetime]
@@ -38,7 +43,7 @@ class Movie(BaseModel):
     actors_names: list[str]
     description: Optional[str]
     director: list[str]
-    genre: list[str]
+    genre: list[Genre]
     imdb_rating: Optional[float]
     title: str
     writers: list[Person]

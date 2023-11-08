@@ -58,11 +58,15 @@ SELECT
             where p.id is not null and pfw.role = 'writer'), ARRAY[]::text[]
     ) as writers_names,
 
-    COALESCE(
-        array_agg(DISTINCT g.name)
-        FILTER (
-            where g.id is not null), ARRAY[]::text[]
-    ) as genre
+   COALESCE (
+       json_agg(
+           DISTINCT jsonb_build_object(
+               'id', g.id,
+               'name', g.name
+           )
+       ) FILTER (WHERE g.id is not null),
+       '[]'
+   ) as genre
 FROM content.film_work fw
 LEFT JOIN content.person_film_work pfw ON pfw.film_work_id = fw.id
 LEFT JOIN content.person p ON p.id = pfw.person_id
