@@ -77,3 +77,16 @@ having max(fw.modified) > '{timestamp}'::timestamp
 or max(p.modified) > '{timestamp}'::timestamp
 or max(g.modified) > '{timestamp}'::timestamp
 ORDER BY modified"""
+
+SELECT_GENRES_SQL_PATTERN = """
+SELECT DISTINCT
+    g.id,
+    g.name,
+    g.description,
+    g.modified
+FROM content.genre g
+JOIN content.genre_film_work gfw ON gfw.genre_id = g.id
+JOIN content.film_work fw ON gfw.film_work_id = fw.id
+WHERE g.modified > '{timestamp}'::timestamp
+order by modified
+"""
